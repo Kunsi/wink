@@ -47,42 +47,6 @@ class TransportsController < ApplicationController
   end
 
   def import_transports
-    json = nil
-    uri = URI("https://onlineservices.kuehne-nagel.com/tracking/api/my-shipments?sort=completionDate,desc&page=0&size=50&userTags=my-shipments")
-    Net::HTTP.start(uri.host, uri.port, :use_ssl => uri.scheme == 'https') do |http|
-      req = Net::HTTP::Get.new uri
-      req['Cookie'] = "ecom_app_token=" + fetch_KN_token 
-      res = http.request req # Net::HTTPResponse object
-      if res.kind_of? Net::HTTPSuccess
-        json = JSON.parse(res.body)
-      else
-        # token probably invalid, so clear it for next round
-        @@KN_token = nil
-      end
-    end
-
-    #puts JSON.pretty_generate(json["content"])
-
-    json['content'].each do |values|
-      transport = Transport.find_by(tracking_number: values['trackingNumber'])
-      unless transport
-        transport = Transport.new
-        transport.shipment_id = values['shipmentId']
-        transport.tracking_number = values['trackingNumber']
-        transport.ordered = 1
-        transport.source_address = "#{values['shipper']}\n#{values['from'].capitalize}"
-        transport.destination_address = "#{values['consignee']}\n#{values['to'].capitalize}"
-        transport.carrier = 'K&N'
-        unless values['completionDate']['date'].nil?
-          transport.delivery_time = Date.parse(values['completionDate']['date'])
-        end
-        # TODO: https://onlineservices.kuehne-nagel.com/tracking/api/shipments/130686969
-      end
-
-      transport.delivery_state = values['milestone']
-      transport.save
-    end
-
     redirect_to transports_path
   end
 
